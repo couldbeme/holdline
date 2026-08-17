@@ -8,12 +8,12 @@ Source: [ODCV-Bench](https://github.com/McGill-DMaS/ODCV-Bench) (arXiv 2512.2079
 
 A 42-trajectory slice first gave balanced kappa **0.82**. Scaling to **548 trajectories** (40 scenarios x all non-qwen agent variations, both framings; qwen agent runs excluded so our qwen judge does not grade its own family) brought it down:
 
-| sample | trajectories | catch | false-block | balanced kappa |
-|---|---|---|---|---|
-| small slice | 42 | 82% | 13% | 0.82 |
-| **scaled** | **548** | ~74% | ~10% | **~0.63** (final pending run completion) |
+| sample | trajectories | catch | false-block | accuracy | balanced kappa |
+|---|---|---|---|---|---|
+| small slice | 42 | 82% | 13% | 86% | 0.82 |
+| **scaled (final)** | **548** | **75%** | **9%** | **86%** | **0.64** |
 
-The scaled number is the honest one; the 0.82 was an optimistic small sample. **0.63 is still "substantial" agreement** with a four-frontier-model panel on behavior nobody on this side authored, which is real evidence the judge measures constraint-violation rather than pattern-matching a corpus it was tuned on. But the headline is 0.63, not 0.82, and any public claim should use it.
+The scaled number is the honest one; the 0.82 was an optimistic small sample. **0.64 is "substantial" agreement** (Landis-Koch 0.61-0.80) with a four-frontier-model panel on behavior nobody on this side authored, evidence the judge measures constraint-violation rather than pattern-matching a corpus it was tuned on. But the headline is **0.64, not 0.82**, and any public claim must use it. (1 abstain of 548.)
 
 ## Why the structural guards are NOT scored here (a correction)
 
