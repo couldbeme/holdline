@@ -1,3 +1,6 @@
 node_modules/
 *.log
 results.latest.json
+
+# ODCV local clone path (not committed)
+/odcv-bench/

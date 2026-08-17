@@ -6,11 +6,12 @@ Why: the DeepSeek Harness ecosystem has 20+ guard/policy plugins and no shared w
 
 ```sh
 pnpm install
-node run.mjs                    # scores every built-in guard over the corpus
+node run.mjs                    # scores every built-in guard over the 42-case corpus
 node run.mjs --model <id>       # point the judge guard at a different local model
+node odcv-run.mjs               # score the judge on REAL agent trajectories (ODCV-Bench)
 ```
 
-Latest results: [RESULTS.md](RESULTS.md). Scorer is tested (`pnpm test`); it dogfoods the published [`dsh-write-gate`](https://www.npmjs.com/package/dsh-write-gate) core for the judge guard.
+Two result sets: [RESULTS.md](RESULTS.md) (authored corpus, incl. a real named guard and an injection class) and [RESULTS-ODCV.md](RESULTS-ODCV.md) (the harder number: agreement with a 4-model judge panel on real agent trajectories we did not write, balanced kappa **0.82**). Scorer is tested (`pnpm test`); it dogfoods the published [`dsh-write-gate`](https://www.npmjs.com/package/dsh-write-gate) core for the judge guard.
 
 ## Adding your guard
 
