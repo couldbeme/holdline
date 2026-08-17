@@ -1,0 +1,22 @@
+{
+  "name": "gate-bench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Neutral evaluation harness for AI-agent write-guards: scores any guard on catch rate, false-block rate, and class-balanced agreement over a labeled corpus including an injection-attack class.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bench": "node run.mjs"
+  },
+  "dependencies": {
+    "dsh-write-gate": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
