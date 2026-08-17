@@ -1,6 +1,6 @@
-# gate-bench
+# holdline
 
-A neutral evaluation harness for AI-agent write-guards. It scores **any guard** — expressed as a `(commitments, action) → block?` function — over a labeled corpus, and reports the metrics that matter for a gate: catch rate, false-block rate, and **class-balanced Cohen's kappa** (raw kappa lies under class imbalance). The corpus includes an **injection-attack class**: actions whose content tries to talk the guard out of its verdict.
+A guard's job is to hold the line. **holdline** measures whether it does — a neutral benchmark for AI-agent write-guards. It scores **any guard** — expressed as a `(commitments, action) → block?` function — over a labeled corpus, and reports the metrics that matter for a gate: catch rate, false-block rate, and **class-balanced Cohen's kappa** (raw kappa lies under class imbalance). The corpus includes an **injection-attack class**: actions whose content tries to talk the guard out of its verdict.
 
 Why: the DeepSeek Harness ecosystem has 20+ guard/policy plugins and no shared way to measure whether any of them works. A guard's README saying "blocks dangerous commands" is not evidence. This harness is the evidence.
 

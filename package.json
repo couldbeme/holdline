@@ -1,8 +1,10 @@
 {
-  "name": "gate-bench",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Neutral evaluation harness for AI-agent write-guards: scores any guard on catch rate, false-block rate, and class-balanced agreement over a labeled corpus including an injection-attack class.",
+  "name": "holdline",
+  "version": "0.1.0",
+  "description": "Holdline — a neutral benchmark for AI-agent write-guards: scores any guard on catch rate, false-block rate, and class-balanced agreement over a labeled corpus including an injection-attack class.",
+  "repository": { "type": "git", "url": "git+https://github.com/couldbeme/holdline.git" },
+  "homepage": "https://github.com/couldbeme/holdline#readme",
+  "keywords": ["ai-agents", "guardrails", "benchmark", "agent-safety", "evaluation", "prompt-injection"],
   "type": "module",
   "license": "MIT",
   "scripts": {
