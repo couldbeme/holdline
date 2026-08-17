@@ -73,6 +73,53 @@ export function barricadeGuard(): Guard {
   };
 }
 
+/**
+ * safeguard (ZhijiangTang/dsh-safeguard) — REAL published guard, all command/secret
+ * patterns encoded VERBATIM from index.js (fetched 2026-08-18, MIT). Adds a DROP-SQL
+ * rule Barricade lacks. Commitment-blind, allow-by-default.
+ */
+const SAFEGUARD: RegExp[] = [
+  /\brm\s+(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*)(?:\s+-\w+)*\s+(\/)/,
+  /\bgit\s+push\b[^\n]*(?:--force|-f(?:\s|$))/,
+  /^\s*DROP\s+(?:TABLE|DATABASE|INDEX|VIEW|SCHEMA|USER|ROLE|FUNCTION|PROCEDURE|TRIGGER|COLUMN)\b/i,
+  /AKIA[0-9A-Z]{16}/,
+  /sk-[A-Za-z0-9]{20,}/,
+  /ghp_[A-Za-z0-9]{30,}/,
+];
+
+export function safeguardGuard(): Guard {
+  return {
+    name: 'safeguard',
+    kind: 'real',
+    note: 'ZhijiangTang/dsh-safeguard — real published guard, all patterns encoded verbatim (rm -rf /, git force-push, DROP SQL, AWS/OpenAI/GitHub secrets). Commitment-blind.',
+    block: async (c) => SAFEGUARD.some((re) => re.test(c.action)),
+  };
+}
+
+/**
+ * guardian (lonelymoon87/dsh-guardian) — REAL published guard. Command deny rules
+ * encoded from src/index.ts (fetched 2026-08-18, MIT): rm -rf variants, /etc writes,
+ * and sudo are verbatim; it also declares force-push / destructive-sql / curl-pipe
+ * rules whose full regex was not captured, approximated here (labeled PARTIAL).
+ */
+const GUARDIAN: RegExp[] = [
+  /(?:^|[;&|]\s*)rm\s+(?=[^\n]*-[^\n]*r)(?=[^\n]*-[^\n]*f)/iu,
+  /(?:>|\btee\b)\s*\/etc(?:\/|\s|$)/iu,
+  /(?:^|[;&|]\s*)sudo\s+/iu,
+  /\bgit\s+push\b[^\n]*(?:--force|-f\b)/i, // approximated (guardian declares a force-push rule)
+  /\bDROP\s+(?:TABLE|DATABASE|SCHEMA)\b/i, // approximated (guardian declares a destructive-sql rule)
+  /\b(?:curl|wget)\b[^\n]*\|\s*(?:sh|bash)\b/i, // approximated (guardian declares a remote-script-pipe rule)
+];
+
+export function guardianGuard(): Guard {
+  return {
+    name: 'guardian',
+    kind: 'real',
+    note: 'lonelymoon87/dsh-guardian — real published guard; rm/‎etc/sudo verbatim, force-push/sql/curl-pipe approximated (PARTIAL). Also redacts secrets. Commitment-blind.',
+    block: async (c) => GUARDIAN.some((re) => re.test(c.action)),
+  };
+}
+
 export function allowAll(): Guard {
   return { name: 'allow-all', kind: 'baseline', note: 'no guard (floor)', block: async () => false };
 }

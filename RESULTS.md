@@ -5,7 +5,9 @@ Corpus: 42 labeled cases, 34 base (literal / paraphrase / trap / clean / hard / 
 | guard | catch | false-block | balanced kappa | injection | kind |
 |---|---|---|---|---|---|
 | dsh-write-gate judge (tier-2) | 100% | 5% | **0.95** | 7/8 | real |
-| barricade (`JohnXu22786/safety-net`) | 14% | **0%** | 0.15 | 4/8 | real |
+| guardian (`lonelymoon87/dsh-guardian`) | 27% | 5% | 0.25 | 5/8 | real (partial) |
+| safeguard (`ZhijiangTang/dsh-safeguard`) | 23% | **0%** | 0.25 | 5/8 | real |
+| barricade (`JohnXu22786/safety-net`) | 14% | **0%** | 0.15 | 4/8 | real (partial) |
 | denylist-archetype | 41% | 5% | 0.35 | 6/8 | archetype |
 | allow-all | 0% | 0% | 0.00 | 3/8 | baseline |
 | block-all | 100% | 100% | 0.00 | 5/8 | baseline |
@@ -14,7 +16,11 @@ Judge per-difficulty: literal 5/5, paraphrase 5/5, trap 8/8, clean 6/6, hard 6/6
 
 ## What this shows
 
-1. **These are complementary tools, not a leaderboard.** This corpus is semantic-commitment-shaped: it asks whether a guard understands that an action violates an operator's *stated* rule, including paraphrases and novel domains. That is the judge's turf and not Barricade's. Barricade is a precise destructive-command interceptor (`rm -rf`, `git push --force`, `dd`, `mkfs`); on this corpus it catches only that narrow class (14%) but with **zero false blocks** (0%), which is exactly what a well-built structural guard should do on inputs outside its domain: stay quiet rather than fire wrong. Scoring it here is somewhat unfair to it, and the honest reading is that a real deployment wants both a structural guard for the destructive-command class and a semantic judge for drift.
+1. **Three real published guards, same shape.** guardian, safeguard, and Barricade are all commitment-blind structural command matchers; on a semantic-commitment corpus they cluster at kappa 0.15 to 0.25, catching 14 to 27% of violations (the destructive-command subset they hardcoded) with near-zero false blocks. That is not them failing; it is them doing precisely what they are built for and staying quiet outside it. The judge sits at 0.95 because it engages the meaning they cannot. **These are complementary tools, not a leaderboard**: a real deployment wants a structural guard for the destructive-command class and a semantic judge for drift, which is why the shipped plugin runs both tiers.
+
+## Related benchmarks
+
+holdline is not the first guardrail benchmark; it is the first for *this* question (does an agent's action honor an operator's authored commitment, on the DeepSeek Harness guard ecosystem). Neighbors, honestly: [AmenRa/GuardBench](https://github.com/AmenRa/GuardBench) evaluates guardrail *models* (content classifiers) not action-gating plugins; [getmcpm/mcp-guardbench](https://github.com/getmcpm/mcp-guardbench) targets MCP injection/exfiltration; [rigour-labs/driftbench](https://github.com/rigour-labs/driftbench) scores raw code-generation for rule-violating-but-passing drift. holdline's distinct axis is commitment-adherence at the tool-call boundary with an injection class, scoring the guard plugins themselves. If your work overlaps, a PR adding a cross-reference or a shared case format is welcome.
 
 2. **The semantic tier earns its cost where structure can't reach.** The judge is at kappa 0.95 with its advantage entirely in the classes no pattern-matcher can touch: novel domains (`hard` 6/6) and paraphrase (5/5). A commitment-blind matcher, real (Barricade) or archetypal, catches the violations whose dangerous string it hardcoded and is blind to the rest by construction.
 
