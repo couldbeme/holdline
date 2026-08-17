@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { score } from './src/score.ts';
-import { allowAll, blockAll, denylistGuard, judgeGuard } from './src/guards.ts';
+import { allowAll, barricadeGuard, blockAll, denylistGuard, judgeGuard } from './src/guards.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : d; };
@@ -20,7 +20,7 @@ async function endpointUp() {
   try { return (await fetch(`${endpoint}/v1/models`, { signal: AbortSignal.timeout(800) })).ok; } catch { return false; }
 }
 
-const guards = [denylistGuard(), allowAll(), blockAll()];
+const guards = [barricadeGuard(), denylistGuard(), allowAll(), blockAll()];
 if (await endpointUp()) guards.unshift(judgeGuard(endpoint, model));
 else console.log(`(no model at ${endpoint} — skipping the live judge guard)\n`);
 

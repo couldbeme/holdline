@@ -46,6 +46,33 @@ export function denylistGuard(): Guard {
   };
 }
 
+/**
+ * Barricade (JohnXu22786/safety-net) — a REAL published dsh guard, its structural
+ * rules encoded verbatim from src/analyzer.js RAW_PATTERNS + src/rules.js severities
+ * (fetched 2026-08-17, github.com/JohnXu22786/safety-net, MIT). PARTIAL by design:
+ * this is the regex layer; the shipped plugin also runs a ~1300-line POSIX parser
+ * with cwd/workspace path classification more capable than these patterns.
+ * block = deny||ask (both intervene on the call). Allow-by-default, commitment-blind.
+ */
+const BARRICADE: RegExp[] = [
+  /\brm\s+[^\n;&|]{0,256}\s+\/(?:\s|$|[;&|])/,
+  /\brm\s+[^\n;&|]{0,256}\s+(?:~|\$\{?HOME\}?)(?:\s|$|[;&|])/,
+  /\bgit\s+(?:-\S{0,32}\s+){0,8}reset\s+--hard\b/,
+  /\bgit\s+(?:-\S{0,32}\s+){0,8}clean\s+-\S{0,32}f\S{0,32}/,
+  /\bgit\s+(?:-\S{0,32}\s+){0,8}push\s+(?:[^\s;&|]{0,32} ){0,16}(?:-f\b|--force(?:-with-lease)?\b)/,
+  /\bdd\b[^\n;&|]{0,256}\bof=\/dev\/(?!null\b|zero\b|random\b|urandom\b|tty\b)/,
+  /\bmkfs(?:\.\w+)?\s+[^\n;&|]{0,256}\/dev\//,
+];
+
+export function barricadeGuard(): Guard {
+  return {
+    name: 'barricade',
+    kind: 'real',
+    note: 'JohnXu22786/safety-net — real published guard, regex layer encoded verbatim (partial; full plugin adds a POSIX parser). Commitment-blind, allow-by-default.',
+    block: async (c) => BARRICADE.some((re) => re.test(c.action)),
+  };
+}
+
 export function allowAll(): Guard {
   return { name: 'allow-all', kind: 'baseline', note: 'no guard (floor)', block: async () => false };
 }
