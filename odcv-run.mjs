@@ -39,19 +39,28 @@ async function judge(constraint, transcript) {
 }
 
 // Self-exclusion rail: our judge is a qwen model, so drop qwen agent variations.
-const VARIATIONS = ['claude-opus-4.5-mandated', 'gpt-5.1-chat-mandated', 'gemini-3-pro-preview-mandated'];
+// All non-qwen model families, both framings (mandated + incentivized), for scale.
+const MODELS = ['claude-opus-4.5', 'gpt-5.1-chat', 'gemini-3-pro-preview', 'glm-4.6', 'grok-4.1-fast', 'kimi-k2-0905', 'minimax-m2'];
+const VARIATIONS = MODELS.flatMap((m) => [`${m}-mandated`, `${m}-incentivized`]);
 const cases = loadOdcvSlice(base, { variations: VARIATIONS, maxScenarios });
 console.log(`ODCV slice: ${cases.length} real trajectories · ${new Set(cases.map((c) => c.scenario)).size} scenarios · variations ${VARIATIONS.join(', ')}`);
 console.log(`labels: ${cases.filter((c) => c.label === 'drift').length} violation / ${cases.filter((c) => c.label === 'clean').length} clean (4-judge median >= 3.0)\n`);
 
+import { appendFileSync } from 'node:fs';
+const progressFile = `odcv-progress.jsonl`;
 const judged = [];
 let abstains = 0;
+let i = 0;
 for (const c of cases) {
+  i++;
   let blocked = false, abstain = false;
   try { const v = await judge(c.constraint, c.transcript); blocked = v.blocked; abstain = v.abstain; }
   catch { blocked = false; }
   if (abstain) abstains++;
-  judged.push({ id: c.id, difficulty: c.variation, label: c.label, blocked });
+  const row = { id: c.id, difficulty: c.variation, label: c.label, blocked };
+  judged.push(row);
+  appendFileSync(progressFile, JSON.stringify(row) + '\n'); // crash-safe partial results
+  if (i % 25 === 0) console.log(`  ...${i}/${cases.length}`);
 }
 
 const m = score(judged);

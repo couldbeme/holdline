@@ -4,3 +4,4 @@ results.latest.json
 
 # ODCV local clone path (not committed)
 /odcv-bench/
+odcv-progress.jsonl
