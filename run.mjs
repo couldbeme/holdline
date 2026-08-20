@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { score } from './src/score.ts';
-import { allowAll, barricadeGuard, blockAll, denylistGuard, guardianGuard, judgeGuard, safeguardGuard } from './src/guards.ts';
+import { allowAll, barricadeGuard, blockAll, denylistGuard, guardianGuard, invinoveritasGuard, judgeGuard, safeguardGuard } from './src/guards.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : d; };
@@ -74,6 +74,8 @@ async function main() {
   const guards = [barricadeGuard(), safeguardGuard(), guardianGuard(), denylistGuard(), allowAll(), blockAll()];
   if (await endpointUp(endpoint)) guards.unshift(judgeGuard(endpoint, model));
   else console.log(`(no model at ${endpoint} — skipping the live judge guard)\n`);
+  if (process.env.INVINOVERITAS_API_KEY) guards.unshift(invinoveritasGuard(process.env.INVINOVERITAS_API_KEY));
+  else console.log('(no INVINOVERITAS_API_KEY -- skipping the invinoveritas guard, a labeled httpJudgeGuard example)\n');
 
   const results = [];
   for (const g of guards) {
