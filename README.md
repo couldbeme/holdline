@@ -15,7 +15,7 @@ Two result sets: [RESULTS.md](RESULTS.md) (authored corpus, incl. a real named g
 
 ## Adding your guard
 
-Implement the `Guard` interface in `src/guards.ts` (name, kind, note, `block(case)`), add it to the list in `run.mjs`, and open a PR with your results. A guard that mounts an actual published plugin (rather than a strategy archetype) is especially welcome.
+See [CONTRIBUTING-GUARDS.md](CONTRIBUTING-GUARDS.md): the in-tree path that works today, the out-of-tree path that's designed but not yet built, and the full interface spec in [docs/GUARD-INTERFACE.md](docs/GUARD-INTERFACE.md).
 
 ## Status
 
