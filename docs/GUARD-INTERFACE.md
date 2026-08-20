@@ -114,6 +114,39 @@ just be dropped calls, not judgment. This is exactly the pattern in PR #1's diff
 why it isn't being merged as-is. If you're wiring a guard against a real endpoint: let it throw.
 Don't catch to be polite.
 
+## If your guard talks HTTP, use `httpJudgeGuard`
+
+Do not write your own fetch. `httpJudgeGuard` in `src/guards.ts` is the shape to build on, and it
+makes the fail-closed property above impossible to get wrong rather than merely required.
+
+```ts
+httpJudgeGuard({
+  name, kind, note, meta,
+  endpoint,
+  headers,
+  mapCaseToBody: (c) => ({ /* your API's request shape */ }),
+  parseBlock:    (body) => /* true means BLOCK */,
+  timeoutMs,   // optional, defaults to 15000
+})
+```
+
+`mapCaseToBody` and `parseBlock` are both required and there is no default request or response
+shape, so no judgment API is privileged by the structure. Your two functions are the only place
+your API's field names appear.
+
+**Why this is stronger than the load-time probe below.** The factory's own fetch handling throws on
+a non-OK response or a transport error, and `parseBlock` runs only after a confirmed-OK response.
+A guard author never receives a code path on which an error could be caught and turned into an
+allow. The probe detects a guard that fails open; this makes one impossible to write through the
+factory.
+
+`invinoveritasGuard` is one disclosed, labeled configuration of it. Read it as the worked example:
+it is exactly a `mapCaseToBody` and `parseBlock` pair filled in for one real API.
+
+If your guard reaches a live endpoint, gate it in `run.mjs` behind a cheap reachability probe the
+way `judgeGuard` and `invinoveritasGuard` are gated. Without one, an unreachable host means every
+case waits out the full per-call timeout in turn.
+
 ## Specified, not built: the loader, the probe, the timeout
 
 None of this exists yet. It's written down here so the shape is agreed before it's built, and so

@@ -251,7 +251,11 @@ export function httpJudgeGuard(opts: {
  * httpJudgeGuard against a real API -- see this function's body for the shape any
  * other judgment API's `mapCaseToBody`/`parseBlock` would need to fill in.
  */
-export function invinoveritasGuard(apiKey: string, endpoint = 'https://api.babyblueviper.com/review'): Guard {
+/** Default endpoint for the labeled invinoveritas configuration. Exported so the runner
+ *  can probe the host before scoring without duplicating the URL. */
+export const INVINOVERITAS_ENDPOINT = 'https://api.babyblueviper.com/review';
+
+export function invinoveritasGuard(apiKey: string, endpoint = INVINOVERITAS_ENDPOINT): Guard {
   return httpJudgeGuard({
     name: 'invinoveritas',
     kind: 'real',

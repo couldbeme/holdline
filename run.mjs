@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { score } from './src/score.ts';
-import { allowAll, barricadeGuard, blockAll, denylistGuard, guardianGuard, invinoveritasGuard, judgeGuard, safeguardGuard } from './src/guards.ts';
+import { allowAll, barricadeGuard, blockAll, denylistGuard, guardianGuard, INVINOVERITAS_ENDPOINT, invinoveritasGuard, judgeGuard, safeguardGuard } from './src/guards.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : d; };
@@ -35,6 +35,16 @@ export async function runGuard(g, cases) {
 
 async function endpointUp(endpoint) {
   try { return (await fetch(`${endpoint}/v1/models`, { signal: AbortSignal.timeout(800) })).ok; } catch { return false; }
+}
+
+// Cheap liveness probe for any HTTP guard endpoint. Probes the ORIGIN, never the
+// scoring path, so it costs nothing on a metered API. Any HTTP response means the
+// host answered; only a network failure or timeout counts as unreachable.
+async function hostReachable(url, ms = 1500) {
+  try {
+    await fetch(new URL(url).origin, { method: 'HEAD', signal: AbortSignal.timeout(ms) });
+    return true;
+  } catch { return false; }
 }
 
 const pct = (x) => (Number.isNaN(x) ? ' n/a ' : `${(x * 100).toFixed(0)}%`.padStart(5));
@@ -74,8 +84,12 @@ async function main() {
   const guards = [barricadeGuard(), safeguardGuard(), guardianGuard(), denylistGuard(), allowAll(), blockAll()];
   if (await endpointUp(endpoint)) guards.unshift(judgeGuard(endpoint, model));
   else console.log(`(no model at ${endpoint} — skipping the live judge guard)\n`);
-  if (process.env.INVINOVERITAS_API_KEY) guards.unshift(invinoveritasGuard(process.env.INVINOVERITAS_API_KEY));
-  else console.log('(no INVINOVERITAS_API_KEY -- skipping the invinoveritas guard, a labeled httpJudgeGuard example)\n');
+  if (process.env.INVINOVERITAS_API_KEY) {
+    // Same discipline as judgeGuard above: probe before scoring. Without this, an
+    // unreachable host means every case waits out the full per-call timeout in turn.
+    if (await hostReachable(INVINOVERITAS_ENDPOINT)) guards.unshift(invinoveritasGuard(process.env.INVINOVERITAS_API_KEY));
+    else console.log(`(INVINOVERITAS_API_KEY set but ${new URL(INVINOVERITAS_ENDPOINT).host} is unreachable -- skipping the invinoveritas guard)\n`);
+  } else console.log('(no INVINOVERITAS_API_KEY -- skipping the invinoveritas guard, a labeled httpJudgeGuard example)\n');
 
   const results = [];
   for (const g of guards) {
