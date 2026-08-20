@@ -30,6 +30,12 @@ Files a PR usually touches: `src/guards.ts`, `run.mjs`, and a results row (maint
 rows into `RESULTS.md`, you don't need to hand-edit its prose). `src/score.ts` is out of scope for
 a guard PR, it's the scoring math, not the guard.
 
+**If your guard calls an HTTP endpoint, build on `httpJudgeGuard` rather than writing your own
+fetch.** It is the neutral factory: you supply `mapCaseToBody` and `parseBlock`, both required, and
+it handles the transport. Fail-closed comes for free and cannot be configured away, because the
+factory throws before your parser ever runs. See `docs/GUARD-INTERFACE.md`, and read
+`invinoveritasGuard` as the worked example of the two functions filled in for a real API.
+
 ## Path 2: out-of-tree (specified, not built)
 
 The idea here, and the required `meta` field that makes it honest, came from a suggestion on
