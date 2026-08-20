@@ -33,8 +33,11 @@ a guard PR, it's the scoring math, not the guard.
 **If your guard calls an HTTP endpoint, build on `httpJudgeGuard` rather than writing your own
 fetch.** It is the neutral factory: you supply `mapCaseToBody` and `parseBlock`, both required, and
 it handles the transport. Fail-closed comes for free and cannot be configured away, because the
-factory throws before your parser ever runs. See `docs/GUARD-INTERFACE.md`, and read
-`invinoveritasGuard` as the worked example of the two functions filled in for a real API.
+factory throws before your parser ever runs. See `docs/GUARD-INTERFACE.md` for the contract and a
+worked example of the two functions.
+
+An in-tree configuration of the factory is an example, never a recommendation. This repo does not
+endorse any judgment service, and its docs will not point you at one.
 
 ## Path 2: out-of-tree (specified, not built)
 

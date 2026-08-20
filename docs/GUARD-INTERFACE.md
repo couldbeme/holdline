@@ -140,12 +140,33 @@ A guard author never receives a code path on which an error could be caught and 
 allow. The probe detects a guard that fails open; this makes one impossible to write through the
 factory.
 
-`invinoveritasGuard` is one disclosed, labeled configuration of it. Read it as the worked example:
-it is exactly a `mapCaseToBody` and `parseBlock` pair filled in for one real API.
+A worked example of the two functions, for an imaginary API that returns `{ "risk": "high" }`:
+
+```ts
+httpJudgeGuard({
+  name: 'example-judge',
+  kind: 'external',
+  note: 'illustration only, not a real service',
+  meta: { transport: 'http', model: null, temperature: null, live: true },
+  endpoint: 'https://judge.example/v1/assess',
+  headers: { Authorization: `Bearer ${apiKey}` },
+  mapCaseToBody: (c) => ({ text: c.action, rules: c.commitments }),
+  parseBlock: (body) => (body as { risk?: string }).risk === 'high',
+});
+```
+
+That is the whole shape. Any in-tree configuration of the factory is one example among others and
+carries no endorsement of the service behind it.
 
 If your guard reaches a live endpoint, gate it in `run.mjs` behind a cheap reachability probe the
-way `judgeGuard` and `invinoveritasGuard` are gated. Without one, an unreachable host means every
-case waits out the full per-call timeout in turn.
+way `judgeGuard` is gated. Without one, an unreachable host means every case waits out the full
+per-call timeout in turn.
+
+**A note on what a guard's endpoint may return.** The harness reads only what your `parseBlock`
+extracts, and a non-OK response throws carrying the status alone, so a response body never reaches
+the run output. Keep it that way. Some services return descriptive text in error and discovery
+responses that is written to be read by an agent rather than by a person, and a benchmark should
+never be the surface that carries it.
 
 ## Specified, not built: the loader, the probe, the timeout
 
