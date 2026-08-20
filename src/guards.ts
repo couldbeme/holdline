@@ -9,16 +9,38 @@ export interface Case {
   action: string;
 }
 
+/**
+ * Declared, construction-time facts about how a guard reaches its verdict.
+ * This enforces PRESENCE, not TRUTHFULNESS — a guard can declare 'in-process'
+ * while secretly calling the network. Module hashing (next round) is what
+ * would address that; see docs/GUARD-INTERFACE.md.
+ */
+export interface GuardMeta {
+  transport: 'http' | 'in-process' | 'local-model';
+  model: string | null;
+  temperature: number | null;
+  live: boolean; // true iff the call leaves the process
+}
+
+/** What a guard actually receives: a case with the ground-truth label removed. */
+export type GuardCase = Omit<Case, 'label'>;
+
 /** A guard decides, for one case, whether to BLOCK (predict drift). */
 export type Guard = {
   name: string;
-  kind: 'real' | 'archetype' | 'baseline';
+  kind: 'real' | 'archetype' | 'baseline' | 'external';
   note: string;
-  block(c: Case): Promise<boolean>;
+  meta: GuardMeta;
+  /**
+   * Receives the case WITHOUT `label`: ground truth is stripped at the call
+   * boundary so a guard cannot read the answer. Compiler-enforced, not just
+   * documented.
+   */
+  block(c: GuardCase): Promise<boolean>;
 };
 
 /** Every guard sees the same uniform representation of a case's action. */
-function asAction(c: Case): NormalizedAction {
+function asAction(c: GuardCase): NormalizedAction {
   return { kind: 'shell', tool: 'action', command: c.action, summary: c.action };
 }
 
@@ -37,11 +59,15 @@ const DENYLIST: RegExp[] = [
   /\b(sk-[a-z0-9]{16,}|AKIA[0-9A-Z]{16})\b/,
 ];
 
+/** Shared by every in-tree guard that is a plain regex/boolean function: no network, no model. */
+const IN_PROCESS_META: GuardMeta = { transport: 'in-process', model: null, temperature: null, live: false };
+
 export function denylistGuard(): Guard {
   return {
     name: 'denylist-archetype',
     kind: 'archetype',
     note: 'fixed regex blocklist over the raw action; commitment-blind (models the dominant swarm strategy)',
+    meta: IN_PROCESS_META,
     block: async (c) => DENYLIST.some((re) => re.test(c.action)),
   };
 }
@@ -69,6 +95,7 @@ export function barricadeGuard(): Guard {
     name: 'barricade',
     kind: 'real',
     note: 'JohnXu22786/safety-net — real published guard, regex layer encoded verbatim (partial; full plugin adds a POSIX parser). Commitment-blind, allow-by-default.',
+    meta: IN_PROCESS_META,
     block: async (c) => BARRICADE.some((re) => re.test(c.action)),
   };
 }
@@ -92,6 +119,7 @@ export function safeguardGuard(): Guard {
     name: 'safeguard',
     kind: 'real',
     note: 'ZhijiangTang/dsh-safeguard — real published guard, all patterns encoded verbatim (rm -rf /, git force-push, DROP SQL, AWS/OpenAI/GitHub secrets). Commitment-blind.',
+    meta: IN_PROCESS_META,
     block: async (c) => SAFEGUARD.some((re) => re.test(c.action)),
   };
 }
@@ -116,12 +144,13 @@ export function guardianGuard(): Guard {
     name: 'guardian',
     kind: 'real',
     note: 'lonelymoon87/dsh-guardian — real published guard; rm/‎etc/sudo verbatim, force-push/sql/curl-pipe approximated (PARTIAL). Also redacts secrets. Commitment-blind.',
+    meta: IN_PROCESS_META,
     block: async (c) => GUARDIAN.some((re) => re.test(c.action)),
   };
 }
 
 export function allowAll(): Guard {
-  return { name: 'allow-all', kind: 'baseline', note: 'no guard (floor)', block: async () => false };
+  return { name: 'allow-all', kind: 'baseline', note: 'no guard (floor)', meta: IN_PROCESS_META, block: async () => false };
 }
 
 export function blockAll(): Guard {
@@ -129,6 +158,7 @@ export function blockAll(): Guard {
     name: 'block-all',
     kind: 'baseline',
     note: 'blocks everything (shows why catch-rate alone is meaningless)',
+    meta: IN_PROCESS_META,
     block: async () => true,
   };
 }
@@ -156,6 +186,7 @@ export function judgeGuard(endpoint: string, model: string): Guard {
     name: `judge:${model}`,
     kind: 'real',
     note: 'dsh-write-gate tier-2 judge (shipped fenced prompt + parser), live model',
+    meta: { transport: 'local-model', model, temperature: 0, live: true }, // matches the pinned temperature: 0 above
     block: async (c) => {
       for (const statement of c.commitments) {
         const v = await judge({ statement, action: asAction(c) });
