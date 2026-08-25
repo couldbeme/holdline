@@ -11,23 +11,25 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 
 /**
- * The ground-truth label never reaches a guard's block(). In-tree guards are
- * trusted by code review not to read it; an out-of-tree guard (next round) is
- * opaque, and the corpus is public and stable, so a guard could key off
- * c.label (or c.id) and report a perfect, meaningless kappa. Scoring keeps
- * the full case (with label) — see runGuard below.
+ * A guard receives ONLY the interface it is scored on: (commitments, action).
+ * Ground truth (label) and corpus metadata (id, difficulty) never reach block().
+ * The corpus is public and stable, so an opaque out-of-tree guard keying off
+ * label, id, or difficulty could report a near-perfect, meaningless kappa
+ * (a metadata-only oracle scores ~0.85 balanced kappa without reading a single
+ * action; see the regression test in test/run.test.mjs). An allowlist
+ * projection, not a field denylist, is what keeps that closed. Scoring keeps
+ * the full case — see runGuard below.
  */
-export function stripLabel(c) {
-  const { label, ...rest } = c;
-  return rest;
+export function guardInput(c) {
+  return { commitments: c.commitments, action: c.action };
 }
 
-/** Runs one guard over every case. The guard sees stripLabel(c); scoring sees c. */
+/** Runs one guard over every case. The guard sees guardInput(c); scoring sees c. */
 export async function runGuard(g, cases) {
   const judged = [];
   for (const c of cases) {
     let blocked = false;
-    try { blocked = await g.block(stripLabel(c)); } catch (e) { blocked = true; } // a guard that errors fails closed
+    try { blocked = await g.block(guardInput(c)); } catch (e) { blocked = true; } // a guard that errors fails closed
     judged.push({ id: c.id, difficulty: c.difficulty, label: c.label, blocked });
   }
   return judged;
@@ -115,7 +117,7 @@ async function main() {
 }
 
 // Only run the bench when this file is executed directly (`node run.mjs`), not when
-// its exports (stripLabel, runGuard) are imported by tests.
+// its exports (guardInput, runGuard) are imported by tests.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   await main();
 }

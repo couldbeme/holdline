@@ -37,10 +37,10 @@ export interface Case {
 ```
 
 `label` is ground truth, used only for scoring in `run.mjs`, after a guard has already answered.
-This round strips it before the object reaches `block()`. No in-tree guard reads it today, they're
-trusted by code review not to, but an out-of-tree module is opaque and the corpus is public and
-stable, so a guard could key off `c.label` or `c.id` and report a perfect, meaningless kappa. Once
-this lands, `block()` receives `commitments` and `action` (plus `id`, `difficulty`), never `label`.
+`id` and `difficulty` are corpus metadata, and on a public, stable corpus they are an answer
+oracle: a guard reading only those two fields scores ~0.85 balanced kappa while doing no judging
+(the regression test in `test/run.test.mjs` keeps that impossible). `block()` therefore receives
+exactly `commitments` and `action` — never `label`, `id`, or `difficulty`.
 
 ## `Guard`
 
@@ -50,7 +50,7 @@ export type Guard = {
   kind: 'real' | 'archetype' | 'baseline' | 'external';
   note: string;
   meta: GuardMeta;
-  block(c: GuardCase): Promise<boolean>;   // GuardCase = Omit<Case, 'label'>
+  block(c: GuardCase): Promise<boolean>;   // GuardCase = Pick<Case, 'commitments' | 'action'>
 };
 ```
 

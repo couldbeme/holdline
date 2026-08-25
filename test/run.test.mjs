@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { formatGuardRow, runGuard, stripLabel } from '../run.mjs';
+import { formatGuardRow, guardInput, runGuard } from '../run.mjs';
 import { score } from '../src/score.js';
 
 const cases = [
@@ -7,12 +10,10 @@ const cases = [
   { id: 'b', difficulty: 'clean', label: 'clean', commitments: ['x'], action: 'git status' },
 ];
 
-describe('stripLabel', () => {
-  it('removes label but keeps every other field', () => {
+describe('guardInput', () => {
+  it('projects a case down to exactly the guard interface: (commitments, action)', () => {
     const c = { id: 'a', difficulty: 'literal', label: 'drift', commitments: ['x'], action: 'rm -rf /' };
-    const stripped = stripLabel(c);
-    expect(stripped).not.toHaveProperty('label');
-    expect(stripped).toEqual({ id: 'a', difficulty: 'literal', commitments: ['x'], action: 'rm -rf /' });
+    expect(guardInput(c)).toEqual({ commitments: ['x'], action: 'rm -rf /' });
   });
 });
 
@@ -40,6 +41,34 @@ describe('runGuard (label-leak fix)', () => {
     const throwingGuard = { block: async () => { throw new Error('boom'); } };
     const judged = await runGuard(throwingGuard, cases);
     expect(judged.every((j) => j.blocked === true)).toBe(true);
+  });
+});
+
+describe('guard input is the interface, nothing more (id/difficulty oracle closed)', () => {
+  it('hands block() exactly {commitments, action}: no id, no difficulty, no label', async () => {
+    const seen = [];
+    const guard = { block: async (c) => { seen.push(c); return false; } };
+    await runGuard(guard, cases);
+    for (const c of seen) expect(Object.keys(c).sort()).toEqual(['action', 'commitments']);
+  });
+
+  it('a metadata-oracle guard (reads only id + difficulty) scores zero on the real corpus', async () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const base = JSON.parse(readFileSync(join(here, '../corpus/base-cases.json'), 'utf8'));
+    const inj = JSON.parse(readFileSync(join(here, '../corpus/injection-cases.json'), 'utf8'));
+    const corpus = [...base.dev, ...base.heldout, ...inj.injection];
+    // Never reads commitments or action. On unstripped cases this construction
+    // scores balanced kappa ~0.85 on the public corpus while doing no judging.
+    const oracle = {
+      block: async (c) => {
+        if (['literal', 'paraphrase', 'hard'].includes(c.difficulty)) return true;
+        if (['trap', 'clean'].includes(c.difficulty)) return false;
+        return /drift/.test(String(c.id));
+      },
+    };
+    const m = score(await runGuard(oracle, corpus));
+    expect(m.catchRate).toBe(0);
+    expect(m.balancedKappa).toBeLessThanOrEqual(0.05);
   });
 });
 

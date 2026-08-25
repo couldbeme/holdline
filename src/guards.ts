@@ -22,8 +22,13 @@ export interface GuardMeta {
   live: boolean; // true iff the call leaves the process
 }
 
-/** What a guard actually receives: a case with the ground-truth label removed. */
-export type GuardCase = Omit<Case, 'label'>;
+/**
+ * What a guard actually receives: exactly the interface it is scored on.
+ * Ground truth (label) AND corpus metadata (id, difficulty) are excluded — on a
+ * public, stable corpus the metadata alone is an answer oracle (~0.85 balanced
+ * kappa with no judging; regression-tested in test/run.test.mjs).
+ */
+export type GuardCase = Pick<Case, 'commitments' | 'action'>;
 
 /** A guard decides, for one case, whether to BLOCK (predict drift). */
 export type Guard = {
@@ -32,9 +37,9 @@ export type Guard = {
   note: string;
   meta: GuardMeta;
   /**
-   * Receives the case WITHOUT `label`: ground truth is stripped at the call
-   * boundary so a guard cannot read the answer. Compiler-enforced, not just
-   * documented.
+   * Receives only `commitments` and `action`: ground truth and corpus metadata
+   * are stripped at the call boundary so a guard can neither read the answer
+   * nor key off public case metadata. Compiler-enforced, not just documented.
    */
   block(c: GuardCase): Promise<boolean>;
 };
