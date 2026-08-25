@@ -20,7 +20,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "bench": "node run.mjs"
+    "bench": "node run.mjs",
+    "check:claims": "node scripts/check-claims.mjs"
   },
   "dependencies": {
     "dsh-write-gate": "^0.1.1"
