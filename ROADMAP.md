@@ -8,8 +8,8 @@ Shipped as [RESULTS-ODCV.md](RESULTS-ODCV.md): 548 ODCV-Bench trajectories with 
 ## 2. Score real named guards, not just archetypes — SHIPPED
 Shipped in [RESULTS.md](RESULTS.md): three real published guards (guardian, safeguard, barricade) encoded from their repos and scored alongside the archetype. Remaining depth: mount Barricade's full ~1300-line parser rather than its regex layer (the current 14%/0% is its floor, not its ceiling).
 
-## 3. Metric depth
-Add per-guard cost and latency (a gate that is accurate but slow is a different product than one that is fast), calibration, and multi-run variance bands (the current numbers are single-run; the trap and injection cells move by a case run-to-run).
+## 3. Metric depth — PARTIALLY SHIPPED
+Cost/latency columns (median ms per case, call counts for live guards) and multi-run variance bands (`node run.mjs --runs 5`) landed; live-model bands await an endpoint run (marked PENDING in RESULTS.md). Remaining: calibration (a gate that is accurate but slow is a different product than one that is fast).
 
 ## 4. Contribution flywheel
 A guard is `(commitments, action) -> block?`. Adding one is a PR to `src/guards.ts` plus a results row. A guard that mounts an actual plugin (rather than an archetype) is especially wanted. The goal is a leaderboard the ecosystem maintains, not one repo's scoreboard.

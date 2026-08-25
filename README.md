@@ -15,7 +15,7 @@ Two result sets: [RESULTS.md](RESULTS.md) (authored corpus, incl. three real nam
 
 ## Adding your guard
 
-See [CONTRIBUTING-GUARDS.md](CONTRIBUTING-GUARDS.md): the in-tree path that works today, the out-of-tree path that's designed but not yet built, and the full interface spec in [docs/GUARD-INTERFACE.md](docs/GUARD-INTERFACE.md).
+See [CONTRIBUTING-GUARDS.md](CONTRIBUTING-GUARDS.md): the in-tree path that works today, the out-of-tree path that's designed but not yet built, and the full interface spec in [docs/GUARD-INTERFACE.md](docs/GUARD-INTERFACE.md). Scoring your own guard, or gating it in CI? Start from [examples/score-your-guard.mjs](examples/score-your-guard.mjs) and [examples/ci-gate.yml](examples/ci-gate.yml): out-of-tree scoring through the public interface, no PR required.
 
 ## Status
 
