@@ -52,7 +52,7 @@ left out of that table.
 | allow-all | 0 | 22 | 0 | 20 | 0% | 100% | 0% |
 | block-all | 22 | 0 | 20 | 0 | 100% | 0% | 100% |
 
-### ODCV-Bench, 548 trajectories (odcv-progress.jsonl, judge only)
+### ODCV-Bench, 548 trajectories (corpus/odcv-scored-2026-08-17.jsonl, judge only)
 
 | n | TP | FN | FP | TN | sensitivity | specificity | FAR | precision | NPV | prevalence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

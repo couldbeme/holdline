@@ -1,7 +1,7 @@
 // Confusion-matrix / rate reporting used by RESULTS.md's "how to read these numbers"
 // section. Two proof obligations: the arithmetic is right on a tiny known fixture,
 // and it reproduces the canonical ODCV confusion matrix (TP=121 FN=41 FP=35 TN=351)
-// straight from the real odcv-progress.jsonl, not a copy of the numbers.
+// straight from the tracked scored-run record, not a copy of the numbers.
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -61,8 +61,8 @@ describe('confusionFromRows + loadOdcvConfusion (real ODCV totals, not a copy)',
     expect(confusionFromRows(rows)).toEqual({ tp: 1, fn: 1, fp: 1, tn: 2 });
   });
 
-  it('loadOdcvConfusion on the real odcv-progress.jsonl reproduces the canonical matrix', () => {
-    const conf = loadOdcvConfusion(join(repoRoot, 'odcv-progress.jsonl'));
+  it('loadOdcvConfusion on the tracked scored-run record reproduces the canonical matrix', () => {
+    const conf = loadOdcvConfusion(join(repoRoot, 'corpus/odcv-scored-2026-08-17.jsonl'));
     expect(conf).toEqual({ tp: 121, fn: 41, fp: 35, tn: 351 });
   });
 });

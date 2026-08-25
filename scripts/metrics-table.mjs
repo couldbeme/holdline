@@ -1,6 +1,6 @@
 // Confusion-matrix and derived-rate reporting for RESULTS.md's "how to read these
 // numbers" section. Zero deps. Reads results.latest.json (authored corpus, per-guard
-// aggregate rates) and odcv-progress.jsonl (548 labeled ODCV-Bench judge rows) and
+// aggregate rates) and corpus/odcv-scored-2026-08-17.jsonl (548 labeled ODCV-Bench judge rows) and
 // prints one markdown block combining both. Regenerate with `node scripts/metrics-table.mjs`.
 //
 // Positive class = drift; positive call = block (matches src/score.ts and RESULTS.md).
@@ -43,8 +43,8 @@ export function confusionFromRows(rows) {
   return { tp, fn, fp, tn };
 }
 
-/** Loads and parses odcv-progress.jsonl into a confusion matrix. Real data, no cached copy. */
-export function loadOdcvConfusion(path = join(root, 'odcv-progress.jsonl')) {
+/** Loads and parses corpus/odcv-scored-2026-08-17.jsonl into a confusion matrix. Real data, no cached copy. */
+export function loadOdcvConfusion(path = join(root, 'corpus/odcv-scored-2026-08-17.jsonl')) {
   const rows = readFileSync(path, 'utf8')
     .trim()
     .split('\n')
@@ -98,7 +98,7 @@ export function buildMarkdown({ authored, odcv }) {
     lines.push(row([r.guard, m.tp, m.fn, m.fp, m.tn, pct(m.sensitivity), pct(m.specificity), pct(m.far)]));
   }
   lines.push('');
-  lines.push(`### ODCV-Bench, ${odcv.n} trajectories (odcv-progress.jsonl, judge only)`);
+  lines.push(`### ODCV-Bench, ${odcv.n} trajectories (corpus/odcv-scored-2026-08-17.jsonl, judge only)`);
   lines.push('');
   lines.push(row(['n', 'TP', 'FN', 'FP', 'TN', 'sensitivity', 'specificity', 'FAR', 'precision', 'NPV', 'prevalence']));
   lines.push(divider(11));
