@@ -31,20 +31,37 @@ export function guardInput(c) {
 /**
  * Runs one guard over every case. The guard sees guardInput(c); scoring sees c.
  * `opts.timingSink`, if provided, gets one wall-clock duration (ms) pushed per case,
- * measured with `opts.clock` (defaults to Date.now, injectable for tests). Both are
- * opt-in and side-effect-only: a plain two-arg call, the pre-existing contract used by
- * examples/score-your-guard.mjs, is completely unaffected.
+ * measured with `opts.clock` (defaults to Date.now, injectable for tests).
+ * `opts.errorSink`, if provided, gets one boolean pushed per case: whether that call
+ * threw. All opts are opt-in and side-effect-only: a plain two-arg call, the
+ * pre-existing contract used by examples/score-your-guard.mjs, is completely
+ * unaffected, and its `score(await runGuard(...))` still works unchanged because the
+ * return value is still exactly the judged array -- `errors` and `errorRate` are
+ * attached as extra own properties on that same array, not a wrapper around it.
+ *
+ * `errors`/`errorRate` exist because fail-closed alone makes a dead transport
+ * indistinguishable from a working judge in the score: a guard whose block() throws on
+ * every case (e.g. every call 402s) scores identically to one that genuinely catches
+ * everything. A contributor's live run hit exactly this. Counting exceptions is what
+ * lets the table tell the two apart.
  */
 export async function runGuard(g, cases, opts = {}) {
-  const { timingSink, clock = Date.now } = opts;
+  const { timingSink, clock = Date.now, errorSink } = opts;
   const judged = [];
+  let errors = 0;
   for (const c of cases) {
     const start = clock();
     let blocked = false;
-    try { blocked = await g.block(guardInput(c)); } catch (e) { blocked = true; } // a guard that errors fails closed
-    finally { timingSink?.push(clock() - start); }
+    let errored = false;
+    try { blocked = await g.block(guardInput(c)); } catch (e) { blocked = true; errored = true; errors++; } // a guard that errors fails closed
+    finally {
+      timingSink?.push(clock() - start);
+      errorSink?.push(errored);
+    }
     judged.push({ id: c.id, difficulty: c.difficulty, label: c.label, blocked });
   }
+  judged.errors = errors;
+  judged.errorRate = cases.length ? errors / cases.length : 0;
   return judged;
 }
 
@@ -114,17 +131,39 @@ export function bandsFrom(perRunMetrics) {
  * before the median is taken, and `calls` counts every one of them: more runs is a
  * bigger, more honest timing sample, not a discarded one. `clock` is injectable so
  * tests never depend on real wall-clock time.
+ *
+ * `errors` pools the error count across every run the same way timing is pooled:
+ * `{ count, total }` over every call made, not just the first run. A run in which
+ * EVERY case errored (a dead transport for that run, not a judgment) is excluded from
+ * `bandsFrom` entirely -- its 100% fail-closed "verdicts" are not judging anything, and
+ * folding them into the mean/min-max would either hide a dead run behind a wide band or,
+ * worse, make it look like real disagreement. If fewer than 2 runs remain valid after
+ * that exclusion, `bandsFrom` already returns null (same rule a single run gets: nothing
+ * to compare against).
  */
 export async function runGuardMulti(g, cases, runs, clock = Date.now) {
   const perRun = [];
+  const perRunErrorRate = [];
   let firstJudged = null;
   const timingSink = [];
+  const errorSink = [];
+  let totalErrors = 0;
   for (let i = 0; i < runs; i++) {
-    const judged = await runGuard(g, cases, { timingSink, clock });
+    const judged = await runGuard(g, cases, { timingSink, clock, errorSink });
     if (i === 0) firstJudged = judged;
     perRun.push(score(judged));
+    perRunErrorRate.push(judged.errorRate);
+    totalErrors += judged.errors;
   }
-  return { runs: perRun.length, first: perRun[0], judged: firstJudged, bands: bandsFrom(perRun), timing: timingSummary(g, timingSink) };
+  const validRuns = perRun.filter((_, i) => perRunErrorRate[i] < 1);
+  return {
+    runs: perRun.length,
+    first: perRun[0],
+    judged: firstJudged,
+    bands: bandsFrom(validRuns),
+    timing: timingSummary(g, timingSink),
+    errors: { count: totalErrors, total: cases.length * runs },
+  };
 }
 
 /** One printed line for a live guard's variance band, mean with [min-max] per tracked metric. */
@@ -156,6 +195,13 @@ const pct = (x) => (Number.isNaN(x) ? ' n/a ' : `${(x * 100).toFixed(0)}%`.padSt
  * renders whatever the guard declared. `r.timing` (median-ms, calls) is optional: a
  * dash means no measurement was taken (typically an in-process guard, see
  * timingSummary), not a zero-cost claim.
+ *
+ * `r.errors` (`{ count, total }`, optional) renders the same way: a dash for zero
+ * errors or for no error data at all (older row shape), `N/total` for a partial count.
+ * A row where every single call errored (`count === total > 0`) gets an explicit
+ * `INVALID: errored on every case` marker appended, because a dead transport that
+ * fails closed on every call scores identical to a genuinely strict guard -- catch-rate
+ * and kappa alone cannot tell the two apart, only the error count can.
  */
 export function formatGuardRow(r) {
   const injBucket = r.metrics.byDifficulty.injection;
@@ -164,7 +210,11 @@ export function formatGuardRow(r) {
   const live = r.meta.live ? 'yes' : 'no';
   const medianMs = r.timing?.medianMs != null ? `${Math.round(r.timing.medianMs)}ms` : '-';
   const calls = r.timing?.calls != null ? String(r.timing.calls) : '-';
-  return [
+  const errCount = r.errors?.count;
+  const errTotal = r.errors?.total;
+  const errorsCell = !errCount ? '-' : `${errCount}/${errTotal}`;
+  const invalid = Boolean(errTotal) && errCount === errTotal;
+  const row = [
     r.guard.padEnd(22),
     pct(r.metrics.catchRate),
     pct(r.metrics.falseBlockRate).padStart(10),
@@ -175,8 +225,10 @@ export function formatGuardRow(r) {
     `temp: ${temp}`.padEnd(9),
     `live: ${live}`.padEnd(10),
     `median: ${medianMs}`.padEnd(14),
-    `calls: ${calls}`,
+    `calls: ${calls}`.padEnd(11),
+    `errors: ${errorsCell}`,
   ].join(' ');
+  return invalid ? `${row}  INVALID: errored on every case` : row;
 }
 
 async function main() {
@@ -203,15 +255,15 @@ async function main() {
     const plan = runsPlan(g, requestedRuns);
     if (plan.reason) console.log(`(${g.name}: ${plan.reason})`);
     const multi = await runGuardMulti(g, cases, plan.runs);
-    results.push({ guard: g.name, kind: g.kind, note: g.note, meta: g.meta, metrics: multi.first, bands: multi.bands, timing: multi.timing, judged: multi.judged });
+    results.push({ guard: g.name, kind: g.kind, note: g.note, meta: g.meta, metrics: multi.first, bands: multi.bands, timing: multi.timing, errors: multi.errors, judged: multi.judged });
   }
 
   console.log(`corpus: ${cases.length} cases (${results[0].metrics.drift} drift, ${results[0].metrics.clean} clean); injection class: ${inj.injection.length}\n`);
   console.log(
     'guard'.padEnd(22), 'catch', 'falseBlock', 'bal.kappa', 'inj-acc', ' kind'.padEnd(11), 'transport'.padEnd(13),
-    'temp    ', 'live      ', 'median-ms     ', 'calls',
+    'temp    ', 'live      ', 'median-ms     ', 'calls      ', 'errors',
   );
-  console.log('-'.repeat(130));
+  console.log('-'.repeat(140));
   for (const r of results) console.log(formatGuardRow(r));
   console.log('\nper-difficulty accuracy (correct/n):');
   for (const r of results) {

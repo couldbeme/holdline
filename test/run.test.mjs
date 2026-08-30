@@ -280,3 +280,144 @@ describe('formatGuardRow (median-ms / calls columns)', () => {
     expect(row).toMatch(/calls:\s*-/);
   });
 });
+
+// Contributor-found gap: a guard whose block() throws on every case (a dead transport,
+// e.g. 402-everywhere) is scored fail-closed and its printed row was, before this,
+// indistinguishable from a working judge that happens to catch everything -- both showed
+// 100% catch. These tests make the harness count and surface exceptions per guard so a
+// dead transport and a working judge can be told apart from the table alone.
+describe('runGuard error accounting (fail-closed transparency)', () => {
+  it('a guard that throws on every case reports errors == N (cases.length)', async () => {
+    const guard = { block: async () => { throw new Error('502 dead transport'); } };
+    const judged = await runGuard(guard, cases);
+    expect(judged.errors).toBe(cases.length);
+    expect(judged.errorRate).toBe(1);
+    // still fail-closed: every case is blocked, unaffected by adding error accounting
+    expect(judged.every((j) => j.blocked === true)).toBe(true);
+  });
+
+  it('a guard that throws on 3 of 5 cases reports errors == 3, fail-closed only on those', async () => {
+    const fiveCases = [
+      { id: 'a', difficulty: 'literal', label: 'drift', commitments: ['x'], action: 'one' },
+      { id: 'b', difficulty: 'clean', label: 'clean', commitments: ['x'], action: 'two' },
+      { id: 'c', difficulty: 'literal', label: 'drift', commitments: ['x'], action: 'three' },
+      { id: 'd', difficulty: 'clean', label: 'clean', commitments: ['x'], action: 'four' },
+      { id: 'e', difficulty: 'literal', label: 'drift', commitments: ['x'], action: 'five' },
+    ];
+    const shouldThrow = [true, false, true, false, true];
+    let i = 0;
+    const guard = { block: async () => { if (shouldThrow[i++]) throw new Error('boom'); return false; } };
+    const judged = await runGuard(guard, fiveCases);
+    expect(judged.errors).toBe(3);
+    expect(judged.errorRate).toBeCloseTo(3 / 5);
+    // the 3 thrown cases are blocked (fail-closed); the 2 clean calls returned false
+    expect(judged.filter((j) => j.blocked).length).toBe(3);
+  });
+
+  it('a clean guard (no throws) reports errors == 0', async () => {
+    const guard = { block: async () => false };
+    const judged = await runGuard(guard, cases);
+    expect(judged.errors).toBe(0);
+    expect(judged.errorRate).toBe(0);
+  });
+});
+
+describe('formatGuardRow (errors column: a dead transport must not read like a working guard)', () => {
+  it('marks a guard that errored on every case INVALID, with the count visible', () => {
+    const r = {
+      guard: 'dead-transport',
+      kind: 'external',
+      meta: { transport: 'http', model: null, temperature: null, live: true },
+      metrics: baseMetrics,
+      errors: { count: 5, total: 5 },
+    };
+    const row = formatGuardRow(r);
+    expect(row).toContain('INVALID: errored on every case');
+    expect(row).toMatch(/errors:\s*5\/5/);
+  });
+
+  it('shows a partial error count as errors N/total without marking the row invalid', () => {
+    const r = {
+      guard: 'invinoveritas',
+      kind: 'real',
+      meta: { transport: 'http', model: null, temperature: null, live: true },
+      metrics: baseMetrics,
+      errors: { count: 3, total: 42 },
+    };
+    const row = formatGuardRow(r);
+    expect(row).toMatch(/errors:\s*3\/42/);
+    expect(row).not.toContain('INVALID');
+  });
+
+  it('shows a dash when a guard has zero errors', () => {
+    const r = {
+      guard: 'denylist-archetype',
+      kind: 'archetype',
+      meta: { transport: 'in-process', model: null, temperature: null, live: false },
+      metrics: baseMetrics,
+      errors: { count: 0, total: 42 },
+    };
+    const row = formatGuardRow(r);
+    expect(row).toMatch(/errors:\s*-/);
+    expect(row).not.toContain('INVALID');
+  });
+
+  it('renders a dash when no error data is present at all (older row shape stays backward compatible)', () => {
+    const r = {
+      guard: 'denylist-archetype',
+      kind: 'archetype',
+      meta: { transport: 'in-process', model: null, temperature: null, live: false },
+      metrics: baseMetrics,
+    };
+    const row = formatGuardRow(r);
+    expect(row).toMatch(/errors:\s*-/);
+  });
+});
+
+// A stubbed nondeterministic guard that can also go dead for an entire run (scripted
+// per-run, no network): lets the exclusion test assert an exact band, not just "not null".
+function flakyScriptedGuard(scriptPerRun) {
+  const casesPerRun = cases.length;
+  let call = 0;
+  return {
+    name: 'flaky-live-judge',
+    kind: 'real',
+    note: 'test stub: a live guard that dies (errors on every case) for one whole run',
+    meta: { transport: 'http', model: null, temperature: 0.7, live: true },
+    block: async () => {
+      const runIdx = Math.floor(call / casesPerRun);
+      const idxInRun = call % casesPerRun;
+      call++;
+      const script = scriptPerRun[runIdx];
+      if (script === 'ERROR_ALL') throw new Error('502 dead transport');
+      return script[idxInRun];
+    },
+  };
+}
+
+describe('runGuardMulti error pooling + band exclusion for a dead-transport run', () => {
+  it('pools error counts across every run into one total', async () => {
+    const guard = flakyScriptedGuard(['ERROR_ALL', [false, false]]);
+    const multi = await runGuardMulti(guard, cases, 2);
+    expect(multi.errors).toEqual({ count: 2, total: 4 });
+  });
+
+  it('excludes an every-case-errored run from the variance band (its fail-closed 100% would otherwise skew the mean)', async () => {
+    const guard = flakyScriptedGuard([
+      'ERROR_ALL', // run 1: dead transport, both cases fail closed -> would be catchRate 1, falseBlockRate 1 if counted
+      [true, false], // run 2: catch a, allow b -> catchRate 1, falseBlockRate 0
+      [false, false], // run 3: miss a, allow b -> catchRate 0, falseBlockRate 0
+    ]);
+    const multi = await runGuardMulti(guard, cases, 3);
+    // mean over the 2 VALID runs only (run 1 excluded): catchRate (1+0)/2, falseBlockRate (0+0)/2
+    expect(multi.bands.catchRate).toEqual({ mean: expect.closeTo(0.5), min: 0, max: 1 });
+    expect(multi.bands.falseBlockRate).toEqual({ mean: 0, min: 0, max: 0 });
+    expect(multi.errors).toEqual({ count: 2, total: 6 });
+  });
+
+  it('reports bands as null when fewer than 2 valid runs remain after excluding dead-transport runs', async () => {
+    const guard = flakyScriptedGuard(['ERROR_ALL', [true, false]]);
+    const multi = await runGuardMulti(guard, cases, 2);
+    expect(multi.bands).toBeNull();
+  });
+});

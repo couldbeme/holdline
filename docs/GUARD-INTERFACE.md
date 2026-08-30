@@ -114,6 +114,15 @@ just be dropped calls, not judgment. This is exactly the pattern in PR #1's diff
 why it isn't being merged as-is. If you're wiring a guard against a real endpoint: let it throw.
 Don't catch to be polite.
 
+An errored call still counts as a block for scoring, which means a guard whose transport is
+entirely dead (every call throws) scores identical to a guard that genuinely catches everything:
+`catch`, `falseBlock`, and `balancedKappa` alone cannot tell the two apart. A contributor's live
+run hit this directly, a 402-everywhere run scored row-for-row identical to `block-all`, and only
+checking the transport layer by hand surfaced it. Because of that, `run.mjs` now counts and prints
+exceptions per guard (the `errors` column, `count/total`) and marks a run where every case errored
+`INVALID: errored on every case`, so a dead transport is visible from the table itself, not only
+from re-reading the guard's own logs.
+
 ## If your guard talks HTTP, use `httpJudgeGuard`
 
 Do not write your own fetch. `httpJudgeGuard` in `src/guards.ts` is the shape to build on, and it
