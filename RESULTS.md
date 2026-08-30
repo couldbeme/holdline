@@ -72,7 +72,7 @@ range. **PENDING**: no live judge endpoint was reachable at time of writing
 is up at `http://127.0.0.1:1234`.
 
 Addendum 2026-08-30: on 2026-08-25 a contributor posted a single-pass live HTTP run in
-PR 1 (invinoveritas, 3698 ms median, 42 calls); min-max variance bands remain
+PR 1 (a contributor's HTTP judge, 3698 ms median, 42 calls; reported by the guard's author, not reproduced by maintainers; https://github.com/couldbeme/holdline/pull/1); min-max variance bands remain
 unmeasured; reproduce with `node run.mjs --runs 5`.
 
 ### Cost and latency
