@@ -31,6 +31,19 @@ describe('claims gate (scripts/check-claims.mjs)', () => {
     expect(r.stdout).toMatch(/claims gate OK/);
   });
 
+  it('fails when RESULTS-ODCV.md stops citing the ODCV-Bench release its labels came from', () => {
+    const root = seededCopy((d) => {
+      const p = join(d, 'RESULTS-ODCV.md');
+      const before = readFileSync(p, 'utf8');
+      const after = before.replaceAll('7353f1c', 'unknown');
+      if (after === before) throw new Error('seed did not apply: release commit not cited');
+      writeFileSync(p, after);
+    });
+    const r = run(root);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/7353f1c/);
+  });
+
   it('fails when the withdrawn 0.82 is seeded back into the README headline', () => {
     const root = seededCopy((d) => {
       const p = join(d, 'README.md');

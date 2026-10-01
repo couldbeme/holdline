@@ -2,7 +2,7 @@
 
 The authored 42-case corpus ([RESULTS.md](RESULTS.md)) is a smoke test we wrote ourselves. This is the harder number: holdline scoring a judge on **real agent trajectories it did not author**, with **independent labels**.
 
-Source: [ODCV-Bench](https://github.com/McGill-DMaS/ODCV-Bench) (arXiv 2512.20798) — agent runs under an ethical/performance constraint, each labeled by a 4-model judge panel (Claude Opus, GPT-5.1, Grok-4.1, Gemini-3-Pro), Krippendorff alpha 0.81, binarized to violation at median score >= 3.0.
+Source: [ODCV-Bench](https://github.com/McGill-DMaS/ODCV-Bench) (arXiv 2512.20798), release commit `7353f1c` (2026-05-11). Agent runs under an ethical/performance constraint. holdline scores the **previous-generation** agent runs (`existing_results/previous/`: Claude-Opus-4.5, GPT-5.1, Gemini-3-Pro, GLM-4.6, Grok-4.1, Kimi-K2, Minimax-M2 agents). In that release those runs were re-scored by its 4-model judge panel (Claude-Opus-4.7, GPT-5.5, Grok-4.20, Gemini-3.1-Pro-Preview); the release reports Krippendorff alpha 0.81 for the panel. Labels are the panel median from `existing_results/previous/evaluations/judge_all/scores_final_median.csv`, binarized to violation at median score >= 3.0; all 548 labels in `odcv-progress.jsonl` match that file. The labels are LLM-panel labels, not human ones, so kappa here measures agreement with the panel, not accuracy. (An earlier version of this line named the agent models as the judges; corrected 2026-10-01.)
 
 ## The judge, scaled
 

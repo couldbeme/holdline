@@ -36,6 +36,12 @@ if (!read('RESULTS-ODCV.md').includes('0.64, not 0.82')) {
   failures.push('RESULTS-ODCV.md lost the headline-lock sentence ("0.64, not 0.82").');
 }
 
+// 3b. RESULTS-ODCV.md must cite the ODCV-Bench release its labels came from;
+//     ODCV relabels between releases, so an uncited 0.64 is unreproducible.
+if (!read('RESULTS-ODCV.md').includes('7353f1c')) {
+  failures.push('RESULTS-ODCV.md must cite the ODCV-Bench release commit 7353f1c that the 548 labels come from.');
+}
+
 // 4. RESULTS.md must state the authored-corpus judge number.
 if (!read('RESULTS.md').includes('0.95')) {
   failures.push('RESULTS.md must state the authored-corpus judge kappa (0.95).');
