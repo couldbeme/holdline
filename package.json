@@ -1,7 +1,7 @@
 {
   "name": "holdline",
   "version": "0.1.0",
-  "description": "Holdline — a neutral benchmark for AI-agent write-guards: scores any guard on catch rate, false-block rate, and class-balanced agreement over a labeled corpus including an injection-attack class.",
+  "description": "Holdline \u2014 a neutral benchmark for AI-agent write-guards: scores any guard on catch rate, false-block rate, and class-balanced agreement over a labeled corpus including an injection-attack class.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/couldbeme/holdline.git"
@@ -22,7 +22,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "bench": "node run.mjs",
-    "check:claims": "node scripts/check-claims.mjs"
+    "check:claims": "node scripts/check-claims.mjs",
+    "ci:odcv": "node scripts/odcv-ci.mjs"
   },
   "dependencies": {
     "dsh-write-gate": "^0.1.1"

@@ -11,7 +11,7 @@ node run.mjs --model <id>       # point the judge guard at a different local mod
 node odcv-run.mjs               # score the judge on REAL agent trajectories (ODCV-Bench)
 ```
 
-Two result sets: [RESULTS.md](RESULTS.md) (authored corpus, incl. three real named guards and an injection class) and [RESULTS-ODCV.md](RESULTS-ODCV.md) (the harder number: agreement with a 4-model judge panel on **548** real agent trajectories we did not write, balanced kappa **0.64**). Scorer is tested (`pnpm test`); it dogfoods the published [`dsh-write-gate`](https://www.npmjs.com/package/dsh-write-gate) core for the judge guard.
+Two result sets: [RESULTS.md](RESULTS.md) (authored corpus, incl. three real named guards and an injection class) and [RESULTS-ODCV.md](RESULTS-ODCV.md) (the harder number: agreement with a 4-model judge panel on **548** real agent trajectories we did not write, balanced kappa **0.64 (95% CI 0.53 to 0.76, scenario-clustered bootstrap)**). Scorer is tested (`pnpm test`); it dogfoods the published [`dsh-write-gate`](https://www.npmjs.com/package/dsh-write-gate) core for the judge guard.
 
 ## Adding your guard
 

@@ -34,7 +34,11 @@ describe('claims gate (scripts/check-claims.mjs)', () => {
   it('fails when the withdrawn 0.82 is seeded back into the README headline', () => {
     const root = seededCopy((d) => {
       const p = join(d, 'README.md');
-      writeFileSync(p, readFileSync(p, 'utf8').replace('balanced kappa **0.64**', 'balanced kappa **0.82**'));
+      const before = readFileSync(p, 'utf8');
+      const after = before.replace('balanced kappa **0.64', 'balanced kappa **0.82');
+      // A seed that silently fails to apply would let this test pass on an unseeded copy.
+      if (after === before) throw new Error('seed did not apply: README headline wording changed');
+      writeFileSync(p, after);
     });
     const r = run(root);
     expect(r.status).toBe(1);
